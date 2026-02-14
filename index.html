@@ -1,0 +1,97 @@
+"use strict";
+
+(function () {
+
+    let gameStarted = false;
+
+    // ===== CONFIG YOU MUST EDIT =====
+    const GAME_CONFIG = {
+        scriptURLs: [
+            // Example:
+            // "game/runtime.js",
+            // "game/data.js"
+        ],
+        madeInC2: false
+    };
+    // =================================
+
+    window.PlayGame = {
+
+        init() {
+            this.preventPageScrolling();
+            this.startGame();
+        },
+
+        startGame() {
+
+            if (gameStarted) return;
+
+            let promises = [];
+
+            for (let i = 0; i < GAME_CONFIG.scriptURLs.length; i++) {
+                promises.push(this.addScript(GAME_CONFIG.scriptURLs[i]));
+            }
+
+            Promise.all(promises)
+                .then(() => {
+
+                    // Construct 2 runtime support (optional)
+                    if (GAME_CONFIG.madeInC2 && typeof cr_createRuntime !== "undefined") {
+                        document.addEventListener("DOMContentLoaded", () => {
+                            cr_createRuntime("c2canvas");
+                        });
+
+                        document.addEventListener("visibilitychange", this.c2Visibility);
+                    }
+
+                    gameStarted = true;
+                    console.log("Game Started");
+
+                })
+                .catch(err => {
+                    console.error("Script load failed:", err);
+                });
+        },
+
+        c2Visibility() {
+            if (typeof cr_setSuspended !== "undefined") {
+                cr_setSuspended(document.hidden);
+            }
+        },
+
+        addScript(src) {
+            return new Promise((resolve, reject) => {
+                const s = document.createElement("script");
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = reject;
+                s.async = false;
+                document.body.appendChild(s);
+            });
+        },
+
+        preventPageScrolling() {
+
+            document.addEventListener("keydown", (event) => {
+
+                if (
+                    event.target &&
+                    ["input", "textarea", "select"].includes(event.target.tagName?.toLowerCase())
+                ) return;
+
+                if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key)) {
+                    event.preventDefault();
+                }
+            });
+
+            document.addEventListener("wheel", e => {
+                e.preventDefault();
+            }, { passive:false });
+
+            document.addEventListener("contextmenu", e => e.preventDefault());
+        }
+    };
+
+    PlayGame.init();
+
+})();
